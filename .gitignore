@@ -4,3 +4,9 @@
 # Python 测试产生的缓存
 __pycache__/
 *.py[cod]
+
+# 本地视觉验证产生的临时截图与调试页（不入库）
+_shot*.png
+_shot*.html
+_crop*.png
+_c_*.png

@@ -1,0 +1,6 @@
+{
+  "name": "tower-defense-mvp",
+  "private": true,
+  "type": "module",
+  "description": "零依赖原生 JS 塔防 MVP。type: module 仅用于让 Node 以 ESM 方式加载 js/ 模块（自动化测试用），不引入任何依赖，也没有任何构建步骤。"
+}
