@@ -58,10 +58,12 @@ class DesktopLauncherFilesTests(unittest.TestCase):
         self.assertIn("MsgBox", text, "缺少 Node 未安装时的提示")
 
     def test_bat_launches_launcher(self):
-        text = BAT.read_text(encoding="utf-8")
+        # 中文 .bat 用系统 ANSI 代码页（GBK）保存最稳，UTF-8 会让 cmd 解析断行
+        text = BAT.read_bytes().decode("gbk")
         self.assertIn("launcher.mjs", text)
-        self.assertIn("chcp 65001", text, "中文输出需要 UTF-8 代码页")
         self.assertIn("where node", text, "应检查 Node 是否存在")
+        self.assertNotIn("chcp", text, "GBK 编码下不需要切换代码页")
+        self.assertIn("cd /d \"%~dp0..\"", text, "应切到仓库根目录再启动")
 
     def test_icon_is_multi_size_ico(self):
         data = ICON.read_bytes()

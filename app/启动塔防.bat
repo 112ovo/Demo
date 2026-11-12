@@ -1,26 +1,25 @@
 @echo off
-chcp 65001 >nul
 setlocal
 cd /d "%~dp0.."
 
 where node >nul 2>nul
 if errorlevel 1 (
   echo.
-  echo æœªæ‰¾åˆ° Node.jsã€‚è¯·å…ˆå®‰è£… Node.js 18 æˆ–æ›´é«˜ç‰ˆæœ¬ï¼šhttps://nodejs.org/
+  echo Î´ÕÒµ½ Node.js¡£ÇëÏÈ°²×° Node.js 18 »ò¸ü¸ß°æ±¾£ºhttps://nodejs.org/
   echo.
   pause
   exit /b 1
 )
 
-echo æ­£åœ¨å¯åŠ¨å¡”é˜² Demoï¼Œç¨ç­‰ä¼šè‡ªåŠ¨å¼¹å‡ºåº”ç”¨çª—å£â€¦
-echo å…³é—­åº”ç”¨çª—å£å³å¯é€€å‡ºï¼›ä¹Ÿå¯ä»¥åœ¨è¿™ä¸ªçª—å£æŒ‰ Ctrl+C ç»“æŸã€‚
+echo ÕýÔÚÆô¶¯Ëþ·À Demo£¬ÉÔµÈ»á×Ô¶¯µ¯³öÓ¦ÓÃ´°¿Ú¡­
+echo ¹Ø±ÕÓ¦ÓÃ´°¿Ú¼´¿ÉÍË³ö£»Ò²¿ÉÒÔÔÚÕâ¸ö´°¿Ú°´ Ctrl+C ½áÊø¡£
 echo.
 
 node "app\launcher.mjs"
 set "rc=%errorlevel%"
 if not "%rc%"=="0" (
   echo.
-  echo å¯åŠ¨å™¨é€€å‡ºï¼Œä»£ç  %rc%ã€‚
+  echo Æô¶¯Æ÷ÍË³ö£¬´úÂë %rc%¡£
   pause
 )
 endlocal
