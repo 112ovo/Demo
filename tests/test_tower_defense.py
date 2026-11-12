@@ -310,6 +310,20 @@ class LogicSimulationTests(unittest.TestCase):
         self.assertEqual(c["goldAfterRestart"], 120)
         self.assertEqual(c["livesAfterRestart"], 10)
 
+    def test_lowpoly_models_are_multi_faceted(self):
+        """塔与敌人应是多面低多边形造型（参考图的建模），不是单块几何图形。"""
+        m = self.sim["models"]
+        self.assertGreaterEqual(m["arrowFacets"], 10, "箭塔造型面数过少")
+        self.assertGreaterEqual(m["frostFacets"], 14, "冰塔造型面数过少")
+        self.assertGreaterEqual(m["normalFacets"], 8, "普通兵造型面数过少")
+        self.assertGreaterEqual(m["fastFacets"], 9, "快速兵造型面数过少")
+        self.assertGreater(
+            m["arrowFacetsSelected"], m["arrowFacets"], "选中时应多绘制射程圈"
+        )
+        self.assertGreater(
+            m["slowedFacets"], m["normalFacets"], "减速/命中时应叠加上额外一层"
+        )
+
     def test_render_smoke_without_dom(self):
         r = self.sim["renderSmoke"]
         self.assertTrue(r["allOk"], f"渲染场景报错: {r['scenarios']}")

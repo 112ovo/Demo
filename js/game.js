@@ -210,12 +210,15 @@ export class Game {
         ? towerAt(this.towers, this.hoverCell.col, this.hoverCell.row)
         : null;
 
-    for (const tower of this.towers) {
+    // 塔按 y 排序，靠下（更近）的后绘制，形成前后遮挡关系
+    const ordered = [...this.towers].sort((a, b) => a.y - b.y);
+    for (const tower of ordered) {
       ui.drawTower(ctx, tower, {
         selected: tower === this.selected,
         hovered: tower === hoveredTower,
       });
     }
+    // 敌人始终绘制在塔之上，避免被高模型挡住看不清
     for (const enemy of this.enemies) ui.drawEnemy(ctx, enemy);
     for (const projectile of this.projectiles) ui.drawProjectile(ctx, projectile);
 

@@ -164,6 +164,217 @@ export function drawMap(ctx) {
 
 /* ---------------------------------------------------------------- 塔 */
 
+/* ---------------------------------------------------------------- 低多边形造型工具 */
+// 参考图的建模是 low-poly 硬表面：靠「顶面亮、正面中、侧面暗」三档色阶 + 多边形分面
+// 在纯 Canvas 下伪造体积感。所有造型都从「脚下的地面点」(0,0) 向上生长。
+
+function shade(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255;
+  let g = (n >> 8) & 255;
+  let b = n & 255;
+  if (amount >= 0) {
+    r += (255 - r) * amount;
+    g += (255 - g) * amount;
+    b += (255 - b) * amount;
+  } else {
+    r *= 1 + amount;
+    g *= 1 + amount;
+    b *= 1 + amount;
+  }
+  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+}
+
+function polygon(ctx, points, fill) {
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i += 1) ctx.lineTo(points[i][0], points[i][1]);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function fillEllipse(ctx, x, y, rx, ry, fill) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function fillRoundRect(ctx, x, y, w, h, r, fill) {
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+const STONE = { light: '#b3bcc9', mid: '#95a0af', dark: '#76818f' };
+
+/** 箭塔：石台基 + 蓝色桁架塔身 + 城垛平台 + 旗帜 */
+function drawArrowModel(ctx, def) {
+  const c = def.color;
+  const light = shade(c, 0.3);
+  const mid = c;
+  const dark = shade(c, -0.34);
+
+  // 台基
+  polygon(ctx, [[-14, -7], [14, -7], [11.5, -11], [-11.5, -11]], STONE.light);
+  ctx.fillStyle = STONE.mid;
+  ctx.fillRect(-14, -7, 28, 7);
+  ctx.fillStyle = STONE.dark;
+  ctx.fillRect(10.5, -7, 3.5, 7);
+
+  // 塔身：暗的内腔 + 两根立柱 + 亮色交叉斜撑
+  polygon(ctx, [[-10, -11], [10, -11], [7.5, -33], [-7.5, -33]], dark);
+  polygon(ctx, [[-10, -11], [-6.4, -11], [-5, -33], [-7.5, -33]], mid);
+  polygon(ctx, [[6.4, -11], [10, -11], [7.5, -33], [5, -33]], shade(c, -0.16));
+
+  ctx.strokeStyle = light;
+  ctx.lineWidth = 1.3;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-7.6, -13.5);
+  ctx.lineTo(6.2, -20.5);
+  ctx.moveTo(7.6, -13.5);
+  ctx.lineTo(-6.2, -20.5);
+  ctx.moveTo(-6.9, -22.5);
+  ctx.lineTo(5.7, -29.5);
+  ctx.moveTo(6.9, -22.5);
+  ctx.lineTo(-5.7, -29.5);
+  ctx.moveTo(-5.9, -31);
+  ctx.lineTo(4.7, -33);
+  ctx.moveTo(5.9, -31);
+  ctx.lineTo(-4.7, -33);
+  ctx.stroke();
+
+  // 平台 + 城垛
+  polygon(ctx, [[-8.6, -33], [8.6, -33], [9.6, -37], [-9.6, -37]], mid);
+  polygon(ctx, [[-9.6, -37], [9.6, -37], [8.6, -39.6], [-8.6, -39.6]], light);
+  ctx.fillStyle = light;
+  for (const x of [-9.2, -3.4, 2.4, 7.8]) ctx.fillRect(x, -43.4, 3.4, 4);
+
+  // 旗杆与旗
+  ctx.strokeStyle = '#5c6573';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -43.4);
+  ctx.lineTo(0, -50.4);
+  ctx.stroke();
+  polygon(ctx, [[0.8, -50], [11, -46.4], [0.8, -42.8]], shade(c, -0.12));
+}
+
+/** 冰塔：冷色台基 + 三段收分塔身（每段带出檐）+ 冰冠尖角与中央冰锥 */
+function drawFrostModel(ctx, def) {
+  const ice = '#eafbfe';
+  const light = shade(def.color, 0.6);
+  const mid = shade(def.color, 0.24);
+  const dark = shade(def.color, -0.02);
+
+  // 台基
+  polygon(ctx, [[-15, -6], [15, -6], [12.5, -10], [-12.5, -10]], light);
+  ctx.fillStyle = mid;
+  ctx.fillRect(-15, -6, 30, 6);
+  ctx.fillStyle = dark;
+  ctx.fillRect(11.6, -6, 3.4, 6);
+
+  // 三段塔身：每段上宽下窄并带出檐，形成「层叠鼓形」轮廓
+  const tiers = [
+    [-10, -16.8, 11.6, 12.4],
+    [-16.8, -23, 10.9, 11.7],
+    [-23, -28.4, 10.2, 11],
+  ];
+  for (const [y1, y2, bottom, top] of tiers) {
+    polygon(ctx, [[-bottom, y1], [bottom, y1], [top, y2], [-top, y2]], mid);
+    polygon(
+      ctx,
+      [[bottom - 2.6, y1], [bottom, y1], [top, y2], [top - 2, y2]],
+      dark
+    );
+    polygon(
+      ctx,
+      [[-top, y2], [top, y2], [top - 1.2, y2 - 1.4], [-top + 1.2, y2 - 1.4]],
+      shade(def.color, 0.42)
+    );
+    ctx.fillStyle = light;
+    ctx.fillRect(-top - 0.4, y2 - 1.7, (top + 0.4) * 2, 1.7);
+  }
+
+  // 冰冠：四角尖冰 + 中央冰锥
+  const iceDark = '#c9eaf4';
+  for (const [x, h, half] of [
+    [-7.4, 5.6, 2.6],
+    [-3.9, 7.4, 2.8],
+    [3.9, 7.4, 2.8],
+    [7.4, 5.6, 2.6],
+  ]) {
+    polygon(ctx, [[x - half, -28.8], [x + half, -28.8], [x, -28.8 - h]], ice);
+    polygon(ctx, [[x, -28.8 - h], [x + half, -28.8], [x, -28.8]], iceDark);
+  }
+  polygon(ctx, [[-3.4, -28.8], [3.4, -28.8], [0, -41]], ice);
+  polygon(ctx, [[0, -41], [3.4, -28.8], [0, -28.8]], iceDark);
+}
+
+/** 普通兵：圆胖红色机身 + 深色面罩 + 短腿短手 */
+function drawNormalModel(ctx, def) {
+  const c = def.color;
+  const light = shade(c, 0.24);
+  const mid = c;
+  const dark = shade(c, -0.32);
+
+  // 腿
+  fillRoundRect(ctx, -7.2, -8, 5.6, 8, 2.2, dark);
+  fillRoundRect(ctx, 1.6, -8, 5.6, 8, 2.2, dark);
+
+  // 手臂
+  fillRoundRect(ctx, -14.4, -18, 5, 10, 2.4, dark);
+  fillRoundRect(ctx, 9.4, -18, 5, 10, 2.4, dark);
+
+  // 身体：主色 + 左上高光 + 右下暗面，模拟硬表面分面
+  fillEllipse(ctx, 0, -15, 10.6, 11.2, mid);
+  ctx.globalAlpha = 0.55;
+  fillEllipse(ctx, -3.2, -18, 6.6, 7.2, light);
+  ctx.globalAlpha = 0.4;
+  fillEllipse(ctx, 4.4, -13.5, 6, 8.6, dark);
+  ctx.globalAlpha = 1;
+
+  // 面罩与眼睛
+  fillRoundRect(ctx, -7.6, -20.4, 15.2, 5.6, 2.6, '#2b2b33');
+  ctx.fillStyle = '#f4f7fa';
+  ctx.fillRect(-4.8, -18.6, 2.5, 2.5);
+  ctx.fillRect(1.6, -18.6, 2.5, 2.5);
+}
+
+/** 快速兵：橙色金字塔头 + 锥形身体 + 深色拳套 */
+function drawFastModel(ctx, def) {
+  const c = def.color;
+  const light = shade(c, 0.16);
+  const mid = c;
+  const dark = shade(c, -0.26);
+  const fist = '#4c515b';
+
+  // 腿
+  fillRoundRect(ctx, -5.8, -6.5, 4.4, 6.5, 2, dark);
+  fillRoundRect(ctx, 1.4, -6.5, 4.4, 6.5, 2, dark);
+
+  // 拳套
+  fillEllipse(ctx, -9.4, -11.5, 3.8, 3.8, fist);
+  fillEllipse(ctx, 9.4, -11.5, 3.8, 3.8, fist);
+
+  // 身体
+  polygon(ctx, [[-6.8, -12], [6.8, -12], [5, -5], [-5, -5]], mid);
+  polygon(ctx, [[-6.8, -12], [-2.4, -12], [-2, -5], [-5, -5]], light);
+
+  // 金字塔头：左亮面 / 中面 / 右暗面
+  polygon(ctx, [[0, -28], [-8.6, -12], [0, -12]], light);
+  polygon(ctx, [[0, -28], [8.6, -12], [0, -12]], dark);
+  polygon(ctx, [[0, -28], [-5, -12], [5, -12]], mid);
+
+  // 面罩与眼睛
+  fillRoundRect(ctx, -4.8, -19.6, 9.6, 4.2, 2, '#2b2b33');
+  ctx.fillStyle = '#f4f7fa';
+  ctx.fillRect(-3, -18.6, 2.2, 2.2);
+  ctx.fillRect(1, -18.6, 2.2, 2.2);
+}
+
 export function drawRange(ctx, x, y, range, color) {
   ctx.beginPath();
   ctx.arc(x, y, range, 0, Math.PI * 2);
@@ -184,7 +395,7 @@ export function drawTower(ctx, tower, options = {}) {
     drawRange(ctx, tower.x, tower.y, tower.getRange(), 'rgba(47, 111, 237, 0.55)');
   }
 
-  // 冰塔脉冲圆环
+  // 冰塔脉冲：贴地扩散的圆环
   for (const pulse of tower.pulses) {
     const p = Math.min(1, pulse.t / def.pulseDuration);
     ctx.beginPath();
@@ -194,43 +405,27 @@ export function drawTower(ctx, tower, options = {}) {
     ctx.stroke();
   }
 
-  // 底座
-  roundRect(ctx, tower.x - 17, tower.y - 17, 34, 34, 8);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  ctx.strokeStyle = selected ? '#2f6fed' : '#c8d2e0';
-  ctx.lineWidth = selected ? 2 : 1.5;
-  ctx.stroke();
-
-  const offset = tower.recoil * 2;
-  if (def.attack === 'projectile') {
-    ctx.save();
-    ctx.translate(tower.x - Math.cos(tower.angle) * offset, tower.y - Math.sin(tower.angle) * offset);
-    ctx.rotate(tower.angle + Math.PI / 2);
+  // 地面阴影 + 选中脚环
+  fillEllipse(ctx, tower.x, tower.y + 1.5, 15, 4.8, 'rgba(15, 23, 42, 0.13)');
+  if (selected) {
     ctx.beginPath();
-    ctx.moveTo(0, -13);
-    ctx.lineTo(9, 9);
-    ctx.lineTo(-9, 9);
-    ctx.closePath();
-    ctx.fillStyle = def.color;
-    ctx.fill();
-    ctx.restore();
-  } else {
-    ctx.beginPath();
-    ctx.arc(tower.x, tower.y - offset, 11, 0, Math.PI * 2);
-    ctx.fillStyle = def.color;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(tower.x, tower.y - offset, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#eafaff';
-    ctx.fill();
+    ctx.ellipse(tower.x, tower.y + 1.5, 17, 6, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = def.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 
-  // 等级点：底座上方三个点，亮起数量 = 等级
+  ctx.save();
+  ctx.translate(tower.x, tower.y + tower.recoil * 1.4);
+  if (def.attack === 'projectile') drawArrowModel(ctx, def);
+  else drawFrostModel(ctx, def);
+  ctx.restore();
+
+  // 等级点：脚下三个点，亮起数量 = 等级
   for (let i = 0; i < tower.maxLevel; i += 1) {
     ctx.beginPath();
-    ctx.arc(tower.x + (i - 1) * 7, tower.y - 23, 2.4, 0, Math.PI * 2);
-    ctx.fillStyle = i < tower.level ? def.color : '#dde4ee';
+    ctx.arc(tower.x + (i - 1) * 6, tower.y + 12, 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = i < tower.level ? def.color : '#d5dde8';
     ctx.fill();
   }
 }
@@ -246,8 +441,17 @@ export function drawPlacement(ctx, game) {
   drawRange(ctx, cx, cy, (def.range + 0) * CELL, 'rgba(47, 111, 237, 0.5)');
 
   const ok = game.checkPlacement(cell.col, cell.row).ok;
-  ctx.fillStyle = ok ? 'rgba(47, 158, 99, 0.35)' : 'rgba(214, 69, 69, 0.35)';
+  ctx.fillStyle = ok ? 'rgba(47, 158, 99, 0.18)' : 'rgba(214, 69, 69, 0.22)';
   ctx.fillRect(cell.col * CELL + 2, cell.row * CELL + 2, CELL - 4, CELL - 4);
+
+  // 半透明模型预览
+  ctx.save();
+  ctx.globalAlpha = 0.82;
+  ctx.translate(cx, cy);
+  if (def.attack === 'projectile') drawArrowModel(ctx, def);
+  else drawFrostModel(ctx, def);
+  ctx.restore();
+
   ctx.strokeStyle = ok ? 'rgba(47, 158, 99, 0.9)' : 'rgba(214, 69, 69, 0.9)';
   ctx.lineWidth = 2;
   ctx.strokeRect(cell.col * CELL + 2, cell.row * CELL + 2, CELL - 4, CELL - 4);
@@ -285,45 +489,39 @@ export function drawPlacement(ctx, game) {
 export function drawEnemy(ctx, enemy) {
   const pos = enemy.getPosition();
   const def = enemy.def;
+  const fast = def.shape === 'triangle';
 
+  // 地面阴影
+  fillEllipse(ctx, pos.x, pos.y + 1, 10.5, 4.2, 'rgba(15, 23, 42, 0.14)');
+
+  // 减速：贴地冷色环
   if (enemy.slowed) {
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, enemy.radius + 4, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(57, 183, 216, 0.85)';
+    ctx.ellipse(pos.x, pos.y + 1, 12.5, 5, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(57, 183, 216, 0.9)';
     ctx.lineWidth = 2;
     ctx.stroke();
   }
 
-  ctx.beginPath();
-  if (def.shape === 'triangle') {
-    ctx.save();
-    ctx.translate(pos.x, pos.y);
-    ctx.rotate(enemy.angle);
-    ctx.moveTo(enemy.radius + 2, 0);
-    ctx.lineTo(-enemy.radius, enemy.radius - 2);
-    ctx.lineTo(-enemy.radius, -enemy.radius + 2);
-    ctx.closePath();
-    ctx.fillStyle = def.color;
-    ctx.fill();
-    if (enemy.hitFlash > 0) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.fill();
-    }
-    ctx.restore();
-  } else {
-    ctx.arc(pos.x, pos.y, enemy.radius, 0, Math.PI * 2);
-    ctx.fillStyle = enemy.hitFlash > 0 ? '#ffffff' : def.color;
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = enemy.hitFlash > 0 ? '#ffffff' : 'rgba(0, 0, 0, 0.12)';
-    ctx.stroke();
+  ctx.save();
+  ctx.translate(pos.x, pos.y);
+  if (fast) drawFastModel(ctx, def);
+  else drawNormalModel(ctx, def);
+
+  // 命中闪白：按整体轮廓盖一层白，持续 0.08s
+  if (enemy.hitFlash > 0) {
+    ctx.globalAlpha = Math.min(1, enemy.hitFlash / 0.08) * 0.72;
+    if (fast) polygon(ctx, [[0, -28], [9, -4], [-9, -4]], '#ffffff');
+    else fillEllipse(ctx, 0, -15, 11, 12.5, '#ffffff');
+    ctx.globalAlpha = 1;
   }
+  ctx.restore();
 
   // 血条
   const w = 28;
   const h = 4;
   const x = pos.x - w / 2;
-  const y = pos.y - enemy.radius - 10;
+  const y = pos.y - (fast ? 33 : 31);
   const ratio = Math.max(0, enemy.hp / enemy.maxHp);
   ctx.fillStyle = 'rgba(31, 41, 55, 0.22)';
   ctx.fillRect(x, y, w, h);
@@ -505,10 +703,23 @@ export function drawHud(ctx, game) {
       ctx.stroke();
     }
 
+    // 模型小图标（白底圆片，避免和按钮同色糊在一起）
+    ctx.beginPath();
+    ctx.arc(rect.x + 22, rect.y + rect.h / 2, 12.5, 0, Math.PI * 2);
+    ctx.fillStyle = shop.affordable ? 'rgba(255, 255, 255, 0.94)' : '#eef2f7';
+    ctx.fill();
+    ctx.save();
+    ctx.globalAlpha = shop.affordable ? 1 : 0.55;
+    ctx.translate(rect.x + 22, rect.y + rect.h / 2 + 9);
+    ctx.scale(0.4, 0.4);
+    if (shop.type === 'arrow') drawArrowModel(ctx, TOWER_TYPES.arrow);
+    else drawFrostModel(ctx, TOWER_TYPES.frost);
+    ctx.restore();
+
     ctx.font = font(12.5, 700);
     ctx.fillStyle = shop.affordable ? '#ffffff' : C.shopDisabledText;
     ctx.textAlign = 'center';
-    ctx.fillText(`${shop.name} ${shop.price}`, rect.x + rect.w / 2, rect.y + 22);
+    ctx.fillText(`${shop.name} ${shop.price}`, rect.x + 70, rect.y + 22);
     ctx.textAlign = 'left';
 
     // 金币不足提示

@@ -429,6 +429,56 @@ out.naiveRun = playStrategy({ upgrades: false, towerSpots: SPOTS });
   };
 }
 
+/* ------------------------------------------------------------ 造型分面数：塔与敌人应为多面低多边形，而不是单块图形 */
+
+{
+  const countFills = (draw) => {
+    let fills = 0;
+    const store = {};
+    const ctx = new Proxy(store, {
+      get(target, prop) {
+        if (prop in target) return target[prop];
+        const fn = () => {
+          if (prop === 'fill') fills += 1;
+        };
+        target[prop] = fn;
+        return fn;
+      },
+      set(target, prop, value) {
+        target[prop] = value;
+        return true;
+      },
+    });
+    draw(ctx);
+    return fills;
+  };
+
+  const game = newGame();
+  game.gold = 500;
+  game.placing = null;
+  game.togglePlacing('arrow');
+  game.tryPlace(2, 3);
+  game.placing = null;
+  game.togglePlacing('frost');
+  game.tryPlace(6, 3);
+  game.placing = null;
+  const [arrow, frost] = game.towers;
+
+  out.models = {
+    arrowFacets: countFills((ctx) => ui.drawTower(ctx, arrow, {})),
+    arrowFacetsSelected: countFills((ctx) => ui.drawTower(ctx, arrow, { selected: true })),
+    frostFacets: countFills((ctx) => ui.drawTower(ctx, frost, {})),
+    normalFacets: countFills((ctx) => ui.drawEnemy(ctx, new Enemy('normal', 3))),
+    fastFacets: countFills((ctx) => ui.drawEnemy(ctx, new Enemy('fast', 3))),
+    slowedFacets: countFills((ctx) => {
+      const enemy = new Enemy('normal', 3);
+      enemy.applySlow(0.55, 1.5);
+      enemy.hitFlash = 0.05;
+      ui.drawEnemy(ctx, enemy);
+    }),
+  };
+}
+
 /* ------------------------------------------------------------ 渲染冒烟：用 mock ctx 跑一遍 render，确认没有 DOM 依赖与调用错误 */
 
 function mockCtx() {
