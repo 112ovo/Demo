@@ -1,0 +1,6 @@
+# WorkBuddy 内部数据（记忆、会话配置等），不纳入版本控制
+.workbuddy/
+
+# Python 测试产生的缓存
+__pycache__/
+*.py[cod]

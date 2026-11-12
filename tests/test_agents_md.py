@@ -38,6 +38,33 @@ class AgentsMdTests(unittest.TestCase):
         self.assertIn("编写或更新相关测试", self.content)
         self.assertIn("确保所有测试和验证全部通过", self.content)
 
+    def test_readme_preserved_after_merge(self):
+        """合并远端初始历史后，README.md 不应丢失。"""
+        readme = REPO_ROOT / "README.md"
+        self.assertTrue(readme.is_file(), f"缺少 {readme}")
+        self.assertTrue(readme.read_text(encoding="utf-8").strip())
+
+    def test_gitignore_covers_internal_files(self):
+        """内部记忆目录与 Python 缓存应被 .gitignore 排除。"""
+        gitignore = REPO_ROOT / ".gitignore"
+        self.assertTrue(gitignore.is_file(), f"缺少 {gitignore}")
+        rules = gitignore.read_text(encoding="utf-8")
+        self.assertIn(".workbuddy/", rules)
+        self.assertIn("__pycache__/", rules)
+
+    def test_workbuddy_not_tracked(self):
+        """内部记忆文件不应出现在 Git 索引中。"""
+        import subprocess
+
+        result = subprocess.run(
+            ["git", "ls-files", ".workbuddy"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.stdout.strip(), "", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
