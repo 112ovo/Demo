@@ -1,6 +1,12 @@
 {
   "name": "tower-defense-mvp",
+  "version": "1.0.0",
   "private": true,
+  "description": "零依赖塔防小游戏：原生 Canvas 2D + ES Modules，附带零依赖桌面启动器",
   "type": "module",
-  "description": "零依赖原生 JS 塔防 MVP。type: module 仅用于让 Node 以 ESM 方式加载 js/ 模块（自动化测试用），不引入任何依赖，也没有任何构建步骤。"
+  "scripts": {
+    "start": "node app/launcher.mjs",
+    "serve": "python -m http.server 8000",
+    "test": "python -m unittest discover -s tests -v"
+  }
 }

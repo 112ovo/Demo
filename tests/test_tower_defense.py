@@ -103,12 +103,14 @@ class StaticStructureTests(unittest.TestCase):
                 )
 
     def test_no_build_step(self):
-        """package.json 只有 type: module 这类声明，不声明依赖与脚本。"""
+        """package.json 只有 type/scripts 这类声明，不声明任何依赖，也没有构建步骤。"""
         pkg = json.loads(read(REPO_ROOT / "package.json"))
         self.assertEqual(pkg.get("type"), "module")
         self.assertNotIn("dependencies", pkg)
         self.assertNotIn("devDependencies", pkg)
-        self.assertNotIn("scripts", pkg)
+        for name, command in pkg.get("scripts", {}).items():
+            self.assertNotIn("build", name, f"不应有构建脚本: {name}")
+            self.assertNotIn("install", command, f"不应有安装步骤: {command}")
 
     def test_main_uses_fixed_timestep(self):
         main = read(JS_DIR / "main.js")

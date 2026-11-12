@@ -1,0 +1,14 @@
+# 换行符：脚本类必须 CRLF（Windows 宿主），代码统一 LF
+* text=auto
+*.vbs text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+
+# 二进制
+*.ico binary
+*.png binary

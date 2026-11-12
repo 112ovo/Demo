@@ -10,3 +10,17 @@ _shot*.png
 _shot*.html
 _crop*.png
 _c_*.png
+_icon*.png
+_vbs_check.vbs
+
+# 图标生成的预览图（.ico 已入库，预览图是副产物）
+app/icon-preview.png
+
+# 打包 / 分发产物
+dist/
+*.log
+*.zip
+
+# Windows 目录噪声
+Thumbs.db
+desktop.ini
